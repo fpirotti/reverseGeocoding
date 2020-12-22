@@ -115,10 +115,10 @@ void MainWindow::cancelCurl() {
 
 bool MainWindow::checkDate()
 {
-    if(QDateTime::currentDateTime().date().year() > 2019)
+    if(QDateTime::currentDateTime().date().year() > 2021)
     {
-        QMessageBox::warning(this,QString("Warning"),QString("Le chiavi API di Google devono essere aggiornate, contattare lo sviluppatore fpirotti@gmail.com ."),
-                          QMessageBox::Ok);
+        //QMessageBox::warning(this,QString("Warning"),QString("Le chiavi API di Google devono essere aggiornate, contattare lo sviluppatore fpirotti@gmail.com ."),
+         //                 QMessageBox::Ok);
         return false;
     }
     return true;

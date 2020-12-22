@@ -19,10 +19,10 @@ MINOR = 1
 ##versiontarget.commands = ../version/debug/version.exe $$MAJOR $$MINOR $$VERSION_HEADER
 ##versiontarget.depends = FORCE
 
-PRE_TARGETDEPS += $$VERSION_HEADER
-QMAKE_EXTRA_TARGETS += versiontarget
+#PRE_TARGETDEPS += $$VERSION_HEADER
+#QMAKE_EXTRA_TARGETS += versiontarget
 
-F:\dev\curl-master\build\lib\Release
+#F:\dev\curl-master\build\lib\Release
 SOURCES += main.cpp\
         mainwindow.cpp \
     worker.cpp \
@@ -43,7 +43,7 @@ RESOURCES += \
 
 
 
-INCLUDEPATH +=  $$quote(F:/dev/curl-master/include)
+##INCLUDEPATH +=  $$quote(F:/dev/curl-master/include)
 
 
 win32 {
@@ -51,11 +51,12 @@ win32 {
         QMAKE_LIBDIR +=     $$quote(F:/dev/curl-master/build/lib/Debug)
         QMAKE_LIBS +=   -llibcurl-d_imp
     } else {
-        QMAKE_LIBDIR +=     $$quote(F:/dev/curl-master/build/lib/Release)
-        QMAKE_LIBS +=   -llibcurl_imp
+        QMAKE_LIBDIR +=     $$quote(/usr/lib/x86_64-linux-gnu)
+        QMAKE_LIBS +=   -llibcurl-imp
         }
     }
 
+QMAKE_LIBS +=   -lcurl
 #Icon made from <a href="http://www.onlinewebfonts.com/icon">Icon Fonts</a>
 ## is licensed by CC BY 3.0
 win32:RC_ICONS += res/iconfence.ico

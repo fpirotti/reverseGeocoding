@@ -1,4 +1,6 @@
 #include "curler.h"
+#include <unistd.h>
+
 // AIzaSyAq-2yfmAlgIZn5oF8rcB6x2CaymiX1d0E") pirotti
 // AIzaSyBdCEGW6wiu_VveTTC_HUNVqErTSL5FIO0")  ??
 // AIzaSyDaj6VomjPh9vaPCz5TIqULgRM1U9lfnAA") marini
@@ -152,7 +154,7 @@ void curler::geocode(QString value)
 
             QString response2 = buffer.c_str();
             logit( QString("Codice: %1<br>Chiave n. %2 di BING aspetto qualche secondo e riprovo: risposta=<br>%3<br>da url<br><br>").arg(httpCode).arg(this->bingkeyn).arg(response2).arg(strurl), 1 ) ;
-            Sleep(waitsecs*1000);
+            usleep(waitsecs*1000);
             waitsecs++;
             addressCount--;
             return;
