@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>res/Google__G__Logo.ico</file>
+        <file>res/File_Bing_logo.ico</file>
+        <file>res/iconfence.ico</file>
+    </qresource>
+</RCC>
