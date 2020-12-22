@@ -18,6 +18,10 @@
 #include <QUrl>
 #include "curl/curl.h"
 
+struct MemoryStruct {
+  char *memory;
+  size_t size;
+};
 
 namespace
 {
@@ -30,13 +34,37 @@ namespace
     {
       return 111412.84 * cos((rlat*3.141593/180)) - 93.5 * cos(3*(rlat*3.141593/180));
     }
-    size_t writeCallback(char* contents, size_t size, size_t nmemb, std::string* buffer)
+
+
+    static size_t
+    WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
     {
       size_t realsize = size * nmemb;
-      if(buffer == NULL) {
+      struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+
+      char *ptr = (char * )realloc(mem->memory, mem->size + realsize + 1);
+      if(ptr == NULL) {
+        /* out of memory! */
+        printf("not enough memory (realloc returned NULL)\n");
         return 0;
       }
-      buffer->append(contents, realsize);
+
+      mem->memory = ptr;
+      memcpy(&(mem->memory[mem->size]), contents, realsize);
+      mem->size += realsize;
+      mem->memory[mem->size] = 0;
+
+      return realsize;
+    }
+
+    size_t writeCallback2(char* contents, size_t size, size_t nmemb, std::string* ibuffer)
+    {
+      size_t realsize = size * nmemb;
+      ibuffer = new std::string();
+      if(ibuffer == NULL) {
+        return 0;
+      }
+      ibuffer->append(contents, realsize);
       return realsize;
     }
 //    size_t header_callback(char *buffer, size_t size,
@@ -63,7 +91,7 @@ class curler : public QObject
     QStringList APIS;
     QString strurl;
     QStringList keys;
-    QStringList bingkeys;
+    QStringList bingkeys, hereKeys;
 
 public:
     curler();
@@ -72,7 +100,7 @@ public:
     CURL *curl;
     CURLcode res;
     int httpCode=0;
-    std::string buffer;
+    QString buffer="";
     bool *terminated;
     bool httpRequestAborted;
     int addressCount;
