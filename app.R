@@ -16,9 +16,10 @@ library(shinyjs)
 library(httr)
 library(openxlsx)
 library(sf)
+library(tidyverse)
 # library(future)
 # library(promises)
-#source("functions.R")
+source("functions.R")
 
 # plan(multisession)
 
@@ -97,27 +98,32 @@ server <- function(input, output, session) {
     currentFile<-NULL
     currKey<-1
     mytable<-NULL
+    mytable.output<-NULL
     stopIt<-F
     isRunning<-F
     
-    rVals<-reactiveValues(outFile=NULL,
-                          errTable=data.frame(Engine=character(0),Error=character(0),Address=character(0)) 
+    rVals<-reactiveValues(errTable=data.frame(Engine=character(0),
+                                              Error=character(0),
+                                              Address=character(0)) 
                           )
     errLog<-tempfile("log")
-    
+    outFile<-paste(sep=".", tempfile("output"), "xlsx")
+    outFileGeo<-paste(sep=".", tempfile("output"), "gpkg")
      
     observeEvent(rVals$errTable, {
+      req(rVals$errTable)
       write_tsv(rVals$errTable,errLog)
     })
     
     output$logTable <- renderTable({
+      req(rVals$errTable)
       rVals$errTable
     })
     
-    output$contents <- renderTable({ 
-        req(rVals$outFile)
-        rVals$outFile
-    })
+    # output$contents <- renderTable({ 
+    #     req(rVals$outFile)
+    #     rVals$outFile
+    # })
      
     output$contents <- renderTable({ 
         file <- input$file1
@@ -160,7 +166,7 @@ server <- function(input, output, session) {
     output$downloadData <- downloadHandler(
  
       filename = function() {
-        if(is.null(currentFile$name)){
+        if(is.null(currentFile$name) || is.null(mytable.output)){
           shinyWidgets::show_alert("Non è stato ancora elaborato alcun dato")
           return(NULL)
         }
@@ -170,14 +176,14 @@ server <- function(input, output, session) {
               format(Sys.Date(), "%Y%m%dT%I%M%S"), '.xlsx', sep='')
       },
       content = function(con) {
-           openxlsx::write.xlsx(isolate(rVals$outFile), con)
+           openxlsx::write.xlsx(mytable.output, con)
       }
     )
     
     output$downloadData2 <- downloadHandler(
 
       filename = function() {
-        if(is.null(currentFile$name)){
+        if(is.null(currentFile$name) || is.null(mytable.output)){
           shinyWidgets::show_alert("Non è stato ancora elaborato alcun dato")
           return(NULL)
         }
@@ -187,7 +193,7 @@ server <- function(input, output, session) {
               format(Sys.Date(), "%Y%m%dT%I%M%S"), '.gpkg', sep='')
       },
       content = function(con) {  
-        sfobj<-st_as_sf(isolate(rVals$outFile), coords=c("long", "lat") )
+        sfobj<-st_as_sf(mytable.output, coords=c("long", "lat") )
         st_crs(sfobj) = 4326
         sf::write_sf(sfobj, con)
       }
@@ -195,7 +201,7 @@ server <- function(input, output, session) {
     
     output$downloadErrLog <- downloadHandler(
       filename = function() {
-        if(is.null(currentFile$name)){
+        if(is.null(currentFile$name) || is.null(mytable.output)){
           shinyWidgets::show_alert("Non è stato ancora elaborato alcun dato")
           return(NULL)
         }
@@ -236,7 +242,7 @@ server <- function(input, output, session) {
  
         ## each row in table
         ttrows<-nrow(mytable)
-         
+        mytable.output<<-NULL
         totErrs<-0
         
         shinyjs::html("process", HTML("<div onclick='Shiny.setInputValue(\"shouldStop\", true, {priority: \"event\"})'>RUNNING!</div>") )
@@ -256,6 +262,10 @@ server <- function(input, output, session) {
                     shinyjs::html("tErrors", as.character(totErrs))
                     shinyjs::addClass("tErrors", "fontRed")
                     
+                    isolate(rVals$errTable) %>% add_row(Engine=isolate(input$type) ,
+                                                        Error=as.character(totErrs) ,
+                                                        Address=address ) 
+                                                   
                     if(isolate(input$maxErrs) > 0 && totErrs>isolate(input$maxErrs)){
                         shinyWidgets::show_alert(sprintf("Too many errors, aborting. 
                                                  Last error is: '%s'", pC))
@@ -292,15 +302,31 @@ server <- function(input, output, session) {
           
           print(length(unique(unlist(mytable[,1]))))
           
-          rVals$outFile<-tt
+          mytable.output<<-tt
           isRunning<-F
           updateProgressBar(session = session, id = "progBar", value = ttrows, total = ttrows )   
           shinyjs::html("process", "START")
           
       #  })
 
-        
-
+          bn<-basename(currentFile$name)
+          raster::extension(bn)<-""
+          con<-paste(bn, '_', isolate(input$type), '_',
+                format(Sys.Date(), "%Y%m%dT%I%M%S"), '.xlsx', sep='')
+          
+          con2<-paste(bn, '_', isolate(input$type), '_',
+                     format(Sys.Date(), "%Y%m%dT%I%M%S"), '.gpkg', sep='')
+          
+          outfileTot<-list(geo=tt, 
+               errors=isolate(rVals$errTable) )
+          
+          saveRDS(outfileTot, "outfileTot.rds")
+          openxlsx::write.xlsx(outfileTot, con) 
+           
+          
+          sfobj<-st_as_sf(mytable.output, coords=c("long", "lat") )
+          st_crs(sfobj) = 4326
+          sf::write_sf(sfobj, con2)
         
     })
 }
