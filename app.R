@@ -251,12 +251,13 @@ server <- function(input, output, session) {
         
           for(i in 1:ttrows){
             address<-mytable[i,1][[1]] 
+            
             if(is.null(cacheFile[[currentEngine]][[address]]) || isolate(input$forceNonCache) ){
 
                 pC<- parseContent(isolate(input$type), address)
               
                 if(is.list(pC)) {
-                    resultTable[[address]]<-pC
+                    resultTable[[i]]<-pC
                 } else {
                     totErrs<-totErrs+1
                     shinyjs::html("tErrors", as.character(totErrs))
@@ -273,7 +274,7 @@ server <- function(input, output, session) {
                         return(NULL)
                     }
                     
-                    resultTable[[address]]<- list(
+                    resultTable[[i]]<- list(
                         lat=0,
                         long=0,
                         accur=pC,
@@ -284,13 +285,15 @@ server <- function(input, output, session) {
                 
                 updateProgressBar(session = session, id = "progBar", value = i, total = ttrows )   
                 
-            } else { 
+            } 
+            else { 
                 resultTable[[i]] <- cacheFile[[currentEngine]][[address]]
             } 
 
         
             if(i%%as.integer(ttrows/200)==0){ 
               updateProgressBar(session = session, id = "progBar", value = i, total = ttrows )
+  
                
             }
           }
@@ -298,7 +301,7 @@ server <- function(input, output, session) {
           saveRDS(cacheFile, "cacheFile.rds")
           tt <- data.table::rbindlist(resultTable )
           
-          tt$Original_Address<-mytable[,1]
+          tt$Original_Address<-as.character(mytable[[1]])
           
           print(length(unique(unlist(mytable[,1]))))
           
