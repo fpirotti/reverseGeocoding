@@ -248,14 +248,15 @@ server <- function(input, output, session) {
         shinyjs::html("process", HTML("<div onclick='Shiny.setInputValue(\"shouldStop\", true, {priority: \"event\"})'>RUNNING!</div>") )
  
         #future({  --- check http://blog.fellstat.com/?p=407
-        
+        counter<- ifelse(ttrows>200, 200, ttrows)
           for(i in 1:ttrows){
             address<-mytable[i,1][[1]] 
             
             if(is.null(cacheFile[[currentEngine]][[address]]) || isolate(input$forceNonCache) ){
 
                 pC<- parseContent(isolate(input$type), address)
-              
+                
+                browser()
                 if(is.list(pC)) {
                     resultTable[[i]]<-pC
                 } else {
@@ -266,14 +267,15 @@ server <- function(input, output, session) {
                     isolate(rVals$errTable) %>% add_row(Engine=isolate(input$type) ,
                                                         Error=as.character(totErrs) ,
                                                         Address=address ) 
-                                                   
+                    
+                    browser()                      
                     if(isolate(input$maxErrs) > 0 && totErrs>isolate(input$maxErrs)){
                         shinyWidgets::show_alert(sprintf("Too many errors, aborting. 
                                                  Last error is: '%s'", pC))
                         saveRDS(cacheFile, "cacheFile.rds")
                         return(NULL)
                     }
-                    
+                    browser()
                     resultTable[[i]]<- list(
                         lat=0,
                         long=0,
@@ -289,12 +291,9 @@ server <- function(input, output, session) {
             else { 
                 resultTable[[i]] <- cacheFile[[currentEngine]][[address]]
             } 
-
-        
-            if(i%%as.integer(ttrows/200)==0){ 
+ 
+            if((i%%as.integer(ttrows/counter))==0){ 
               updateProgressBar(session = session, id = "progBar", value = i, total = ttrows )
-  
-               
             }
           }
 
