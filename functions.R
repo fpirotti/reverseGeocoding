@@ -1,3 +1,9 @@
+library(readr)
+library(shinyalert)
+library(shinyWidgets)
+library(curl)
+library(shinyjs)  
+library(httr)
 # ovreallGcalls<-list()
 # ovreallGcalls[[format(Sys.time(), "%Y%m")]]<-0
 # saveRDS(ovreallGcalls,"ovreallGcalls.rds")
@@ -19,8 +25,8 @@ keys <- list(
   ),
   
   B = c(
-    "AqfXHrbz_Qm4PuVk7lAPMA7ue1vuhMbJgLI-3ZwGBQ3QRIqpMcMBDx2N6OZdJYoj",
     "At2br5wQAqbVaQW6Fn9eJTTbnrMiaSkriO4lx6YdfDSGNsGI3lMYMYYjlmCbjU-5",
+    "AqfXHrbz_Qm4PuVk7lAPMA7ue1vuhMbJgLI-3ZwGBQ3QRIqpMcMBDx2N6OZdJYoj",
     "AtFnmH3kI3H_eOuB1eyxEd66fISOnuj6R7nuM_uhPAhtB7_yL1bTr0Wt4gj_ZVf8",
     "AjvjPYuoA4IgNeooKvodDLcxbVL1F8RdIxXUeYsb6PgiVapURz_PbbWvOxVKmNps"
   ),
@@ -38,13 +44,24 @@ API.list <-
 
 
 
-readURL<-function(url){
+readURL<-function(url, useshinyjs=T){
 
   r <- GET((url))
   if(status_code(r)!=200){
-    shinyWidgets::show_alert(sprintf("Errore. Codice %s:    ---  %s",
-                                     status_code(r), http_status(r)$message,
-                                     url )) 
+    err <- sprintf("\n%s - Errore. Codice %s:  %s\n%s %s",
+                   Sys.time(), status_code(r), http_status(r)$message,
+                   content(r)$errorDetails[[1]],
+                   url )
+    if(!useshinyjs){
+      print(err)
+      print(url)
+    } else {
+      cat(err, file="err.log", append = T)
+      shinyjs::html(id="logSpace", html=paste0("<br>", err), add=T )
+    }
+
+    
+   # shinyWidgets::show_alert(err) 
     return(NULL)
   }
   
@@ -136,15 +153,16 @@ decode.functions[["B"]]<-decode.bing
 decode.functions[["H"]]<-decode.here
 decode.functions[["G"]]<-decode.google
   
-getContent<-function(engine, address){
+getContent<-function(engine, address, useshinyjs=T){
   url<-sprintf(API.list[[engine]], 
                keys[[engine]][[1]],
                URLencode(address) )
-  readURL(url) 
+  readURL(url, useshinyjs) 
 }
 
-parseContent<-function( type, address){
+parseContent<-function( type, address, useshinyjs=T){
   
+  address<- gsub("[<>]","", address)
   if(type=="ALL"){
     for(f in names(decode.functions)){
       
@@ -164,7 +182,7 @@ parseContent<-function( type, address){
         }
       }
       
-      content<-getContent(f, address)
+      content<-getContent(f, address, useshinyjs)
       
       if(is.null(content)){
         next
@@ -175,7 +193,7 @@ parseContent<-function( type, address){
       if(is.list(dd)){
         cacheFile[[dd$type]][[address]]<<-dd
         if(length(cacheFile[[dd$type]])%%100==0) {
-          print("Saving cache")
+         # print("Saving cache")
           saveRDS(cacheFile, "cacheFile.rds")
         }
       }
@@ -185,12 +203,16 @@ parseContent<-function( type, address){
       } 
     }
   } else {
-    content<-getContent(type, address)
+  
+    content<-getContent(type, address, useshinyjs)
+    if(is.null(content)){
+      return(NULL)
+    }
     dd<-decode.functions[[type]](content)
     if(is.list(dd)){
       cacheFile[[dd$type]][[address]]<<-dd
       if(length(cacheFile[[dd$type]])%%100==0) {
-        print("Saving cache")
+        #print("Saving cache")
         saveRDS(cacheFile, "cacheFile.rds")
       }
     }

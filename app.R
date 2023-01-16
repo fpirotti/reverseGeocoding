@@ -11,7 +11,7 @@ library(shiny)
 library(readr)
 library(shinyalert)
 library(shinyWidgets)
-library(curl)      
+library(curl)
 library(shinyjs)  
 library(httr)
 library(openxlsx)
@@ -23,6 +23,7 @@ source("functions.R")
 
 # plan(multisession)
 
+options(shiny.maxRequestSize = 100*1024^2)
 # Define UI for application that draws a histogram
 ui <- fluidPage(
     useShinyjs(),  # Include shinyjs
@@ -50,11 +51,14 @@ ui <- fluidPage(
         sidebarPanel(
             fileInput("file1", label = h3("File input")),
             fluidRow(
-                column(6, checkboxInput("header", div(title="File con prima riga con intestazione (nome colonne)",
+                column(4, checkboxInput("header", div(title="File con prima riga con intestazione (nome colonne)",
                                                       HTML("Header<sup>?</sup>")), TRUE) ) ,
-                column(6, checkboxInput("forceNonCache", 
+                column(4, checkboxInput("forceNonCache", 
                                      div(title="Non utilizza la cache ma obbliga nuova interrogazione da Engine selezionata", 
-                                         HTML("Force<sup>?</sup>")), F) )
+                                         HTML("Force NO Cache<sup>?</sup>")), F) ),
+                column(4, checkboxInput("forceAllCache", 
+                                        div(title="Utilizza la cache per trovare la coordinata, da qualsiasi Engine si trovi l'address", 
+                                            HTML("All Cache<sup>?</sup>")), F) )
             ),
             numericInput("maxErrs", div(title="Maximum number of allowed errors - leave 0 for infinite",
                                         HTML("Max Errors<sup>?</sup>") ), value = 0 ),
@@ -85,7 +89,8 @@ NB: 'ALL' applica in preferenza BING, poi HERE e in ultima istanza Google.",
             fluidRow(column(3, h5(HTML("Error Log Table: 
                                        tot errors <span id='tErrors'>0</span>") ) ), 
                      column(9, downloadButton("downloadErrLog", "Download Error Table") ) ),
-            tableOutput("logTable")
+            tableOutput("logTable"),
+            div(id="logSpace", style="border:dotted 1px black; width:100%; height:200px;", "Log")
         )
     )
 )
@@ -94,6 +99,11 @@ NB: 'ALL' applica in preferenza BING, poi HERE e in ultima istanza Google.",
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
+  # source("functions_auth.R", local=T)
+  startRow <- 1
+  resultTable<-list()
+  
+  cat( as.character(Sys.time()), file="err.log")
     currentEngine<-"H"
     currentFile<-NULL
     currKey<-1
@@ -130,8 +140,8 @@ server <- function(input, output, session) {
         req(file)
         ext <- tools::file_ext(file$datapath) 
         
-        if(file.size(file$datapath)/1000000 > 10){
-            shinyWidgets::show_alert("File size is too big, please limit to 10 MB")
+        if(file.size(file$datapath)/1000000 > 100){
+            shinyWidgets::show_alert("File size is too big, please limit to 100 MB")
             return(NULL)
         }
         
@@ -193,9 +203,14 @@ server <- function(input, output, session) {
               format(Sys.Date(), "%Y%m%dT%I%M%S"), '.gpkg', sep='')
       },
       content = function(con) {  
+        nas <- which(is.na(mytable.output$long)|is.na(mytable.output$lat)) 
+        mytable.output[nas,"long"]<-0
+        mytable.output[nas,"lat"]<-0
+  
         sfobj<-st_as_sf(mytable.output, coords=c("long", "lat") )
         st_crs(sfobj) = 4326
         sf::write_sf(sfobj, con)
+        shinyWidgets::show_alert(sprintf("%d rows with null coordinates! Converted to 0° ", length(nas)) )
       }
     )
     
@@ -238,7 +253,6 @@ server <- function(input, output, session) {
       
         isRunning<-T
       
-        resultTable<-list()
  
         ## each row in table
         ttrows<-nrow(mytable)
@@ -249,14 +263,47 @@ server <- function(input, output, session) {
  
         #future({  --- check http://blog.fellstat.com/?p=407
         counter<- ifelse(ttrows>200, 200, ttrows)
-          for(i in 1:ttrows){
+        if(startRow==1)  resultTable<-list()
+        
+        idx.todo<-rep(NA,ttrows)
+         
+        ##
+        if(isolate(input$forceAllCache)){
+  
+          for(i in names(cacheFile)){
+            address.in.cache<-names(cacheFile[[i]])
+            matches <- mytable$domicilio %in% address.in.cache 
+            idx.todo[which(matches)] <- i
+          }
+        }
+        for(i in startRow:ttrows){
+            startRow <- i
             address<-mytable[i,1][[1]] 
+            ##se per qualche motivo non è da fare
+            if( !is.na(idx.todo[[i]]) ) { 
+              resultTable[[i]] <- cacheFile[[ idx.todo[[i]] ]][[address]]
+             
+              next
+            } 
             
-            if(is.null(cacheFile[[currentEngine]][[address]]) || isolate(input$forceNonCache) ){
-
-                pC<- parseContent(isolate(input$type), address)
+            # if(isolate(input$type)=="ALL") { 
+              
+              if( !is.null(cacheFile[["G"]][[address]]) ) ww<-"G"
+              else if( !is.null(cacheFile[["B"]][[address]]) ) ww<-"B"
+              else if( !is.null(cacheFile[["H"]][[address]]) ) ww<-"H"
+              else  ww <- integer(0)
+              
+            # } else {
+            #   if( !is.null(cacheFile[[currentEngine]][[address]]) ){
+            #     ww <- currentEngine
+            #   } 
+            # }
+            
+            if(isolate(input$forceNonCache) || length(ww)==0 ){
+              
                 
-                browser()
+                pC<- parseContent(isolate(input$type), address)
+             
                 if(is.list(pC)) {
                     resultTable[[i]]<-pC
                 } else {
@@ -268,14 +315,14 @@ server <- function(input, output, session) {
                                                         Error=as.character(totErrs) ,
                                                         Address=address ) 
                     
-                    browser()                      
+                                        
                     if(isolate(input$maxErrs) > 0 && totErrs>isolate(input$maxErrs)){
                         shinyWidgets::show_alert(sprintf("Too many errors, aborting. 
                                                  Last error is: '%s'", pC))
                         saveRDS(cacheFile, "cacheFile.rds")
                         return(NULL)
                     }
-                    browser()
+                    
                     resultTable[[i]]<- list(
                         lat=0,
                         long=0,
@@ -289,7 +336,11 @@ server <- function(input, output, session) {
                 
             } 
             else { 
-                resultTable[[i]] <- cacheFile[[currentEngine]][[address]]
+                resultTable[[i]] <- cacheFile[[ ww ]][[address]]
+                if((i%%as.integer(ttrows/counter))==0){ 
+                  updateProgressBar(session = session, id = "progBar", value = i, total = ttrows )
+                }
+                next
             } 
  
             if((i%%as.integer(ttrows/counter))==0){ 
@@ -299,11 +350,11 @@ server <- function(input, output, session) {
 
           saveRDS(cacheFile, "cacheFile.rds")
           tt <- data.table::rbindlist(resultTable )
-          
+           
           tt$Original_Address<-as.character(mytable[[1]])
           
-          print(length(unique(unlist(mytable[,1]))))
-          
+          #print(length(unique(unlist(mytable[,1]))))
+          save(tt, file="lastProcess.rda")
           mytable.output<<-tt
           isRunning<-F
           updateProgressBar(session = session, id = "progBar", value = ttrows, total = ttrows )   
@@ -324,11 +375,16 @@ server <- function(input, output, session) {
           
           saveRDS(outfileTot, "outfileTot.rds")
           openxlsx::write.xlsx(outfileTot, con) 
-           
           
+          nas <- which(is.na(mytable.output$long)|is.na(mytable.output$lat) ) 
+          mytable.output[nas,"long"]<-0
+          mytable.output[nas,"lat"]<-0
+ 
           sfobj<-st_as_sf(mytable.output, coords=c("long", "lat") )
-          st_crs(sfobj) = 4326
+          st_crs(sfobj) = 4326 
           sf::write_sf(sfobj, con2)
+          
+          shinyWidgets::show_alert(sprintf("%d rows with null coordinates!", length(nas)) )
         
     })
 }
