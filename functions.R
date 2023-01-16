@@ -16,23 +16,22 @@ if(file.exists("cacheFile.rds")) {
 
 ovreallGcalls<-readRDS("ovreallGcalls.rds")
 
-keys <- list(
-  G = c(
-    "AIzaSyDvfSqURa60jKdXBEcL7hnwsvwEWhYgkm4",
-    "AIzaSyDeAaUewDUcIriQsqOX1NNGxatX8WkbZIE",
-    "AIzaSyCMV7dLRGHwkTyuOhojM03Sgh5Y3IZAGXM",
-    "AIzaSyCpQoUQ9Pnz3jzCE8KpRWW1bBuzT-_a97M"
-  ),
-  
-  B = c(
-    "At2br5wQAqbVaQW6Fn9eJTTbnrMiaSkriO4lx6YdfDSGNsGI3lMYMYYjlmCbjU-5",
-    "AqfXHrbz_Qm4PuVk7lAPMA7ue1vuhMbJgLI-3ZwGBQ3QRIqpMcMBDx2N6OZdJYoj",
-    "AtFnmH3kI3H_eOuB1eyxEd66fISOnuj6R7nuM_uhPAhtB7_yL1bTr0Wt4gj_ZVf8",
-    "AjvjPYuoA4IgNeooKvodDLcxbVL1F8RdIxXUeYsb6PgiVapURz_PbbWvOxVKmNps"
-  ),
-  
-  H = c("YeoIkazjfVa2WND4PUvLAjDR7VGRV_QZnfQ80TjTZSc")
-)
+
+source("keys.R", local=TRUE)
+## please include file with your own keys to bing, google and here in a list
+## like below
+# keys <- list(
+#   G = c(
+#     "xxxxxxxxxxxxxxxxx",
+#     "yyyyyyyyyyyyyy" 
+#   ),
+#   
+#   B = c(
+#     "At2ffffffffffffffffffffffffffffffffffffff",
+#     "Aqertert444444444444444444444444444444444" 
+#   ),
+#   H = c("ertetrtdrrrrrrrrrrrrrrrrrrrrrrrr")
+# )
 API.list <-
   list(
     G = "https://maps.googleapis.com/maps/api/geocode/json?key=%s&region=IT&address=%s",
