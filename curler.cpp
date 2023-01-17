@@ -1,29 +1,18 @@
 #include "curler.h"
 #include <unistd.h>
-
-// AIzaSyAq-2yfmAlgIZn5oF8rcB6x2CaymiX1d0E") pirotti
-// AIzaSyBdCEGW6wiu_VveTTC_HUNVqErTSL5FIO0")  ??
-// AIzaSyDaj6VomjPh9vaPCz5TIqULgRM1U9lfnAA") marini
-// AIzaSyCMV7dLRGHwkTyuOhojM03Sgh5Y3IZAGXM") scettro
-// AIzaSyCpQoUQ9Pnz3jzCE8KpRWW1bBuzT-_a97M") cirgeo;
+ 
 curler::curler()
 {
 
     httpRequestAborted=false;
     addressCount=0;
     // la prima di massive geocoding api A2A google cloud
-    keys   << QString("AIzaSyDvfSqURa60jKdXBEcL7hnwsvwEWhYgkm4")
-        << QString("AIzaSyDeAaUewDUcIriQsqOX1NNGxatX8WkbZIE")
-        << QString("AIzaSyCMV7dLRGHwkTyuOhojM03Sgh5Y3IZAGXM")
-        << QString("AIzaSyCpQoUQ9Pnz3jzCE8KpRWW1bBuzT-_a97M") ;
-
-    bingkeys  << QString("AqfXHrbz_Qm4PuVk7lAPMA7ue1vuhMbJgLI-3ZwGBQ3QRIqpMcMBDx2N6OZdJYoj")
-        << QString("At2br5wQAqbVaQW6Fn9eJTTbnrMiaSkriO4lx6YdfDSGNsGI3lMYMYYjlmCbjU-5")
-        << QString("AtFnmH3kI3H_eOuB1eyxEd66fISOnuj6R7nuM_uhPAhtB7_yL1bTr0Wt4gj_ZVf8")
-        << QString("AjvjPYuoA4IgNeooKvodDLcxbVL1F8RdIxXUeYsb6PgiVapURz_PbbWvOxVKmNps")
-        << QString("By64hlG4PdAfXBfuUk4W~1exJg1HhMCWNyBuaJ83cYA~Atxa5WwV-4dy-5aB6uMysryRQNfoQ1IGPOFutZoGt2SarcHPjO4wwCSGdbpyDPst");
-
-    hereKeys  << QString("SiR0wAmQLGlmZUZK7i6jw92_stPPd4eO0Uln47NzJbg");
+    keys   << QString("putYourApikeyhere")
+ 
+    bingkeys  << QString("putYourApikeyhere")
+ 
+    hereKeys  << QString("putYourApikeyhere");
+    
     APIS << QString("https://maps.googleapis.com/maps/api/geocode/json?key=%2&region=IT&address=%1")
       << QString("https://maps.googleapis.com/maps/api/geocode/json?latlng=%1&key=%2&region=IT")
        << QString("http://dev.virtualearth.net/REST/v1/Locations?CountryRegion=IT&addressLine=%1&key=%2")
