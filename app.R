@@ -138,8 +138,11 @@ server <- function(input, output, session) {
     output$contents <- renderTable({ 
         file <- input$file1
         req(file)
-        ext <- tools::file_ext(file$datapath) 
+        ext <- tools::file_ext(file$datapath)  
+         
+         
         
+        message("hasdfasdf")
         if(file.size(file$datapath)/1000000 > 100){
             shinyWidgets::show_alert("File size is too big, please limit to 100 MB")
             return(NULL)
@@ -157,7 +160,17 @@ server <- function(input, output, session) {
                                   "Please upload a file zip or CSV or TXT extensions. Must be a table"))
         
         mytable<<-tryCatch({ 
-            read_tsv(file$datapath)
+            dat <- as.data.frame(read_tsv(file$datapath))
+            enc<- guess_encoding(file$datapath, n_max = 1000)
+            if( tolower(substr(enc[1,1][[1]],1,3)) != "utf" ) { 
+              # shinyWidgets::show_alert(paste0(
+              #   "Your file is not in UTF-8 - if error is returned, please try 
+              #   to save your file in UTF-8 and reload. The system will try to 
+              #   convert to UTF-8 the file.")
+              #   ) 
+              dat[,1] <- iconv(dat[,1], from = enc[1,1][[1]], to = "UTF-8")
+              dat
+            }
         }, error=function(e){
             return(e)
         })

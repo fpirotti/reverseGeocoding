@@ -26,9 +26,7 @@
 #include <QStringList>
 #include "curler.h"
 #include <dialog.h>
-// AIzaSyBdCEGW6wiu_VveTTC_HUNVqErTSL5FIO0
-// AIzaSyBX30Ier9IR5COjhdZ-iNLxhrmUdUG3JKo
-// AIzaSyBT9mLxQF-rHxItfcM06PEEs0VNAfUuPBY
+
 
 namespace Ui {
 class MainWindow;

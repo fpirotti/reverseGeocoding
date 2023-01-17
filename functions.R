@@ -160,7 +160,7 @@ getContent<-function(engine, address, useshinyjs=T){
 }
 
 parseContent<-function( type, address, useshinyjs=T){
-  
+
   address<- gsub("[<>]","", address)
   if(type=="ALL"){
     for(f in names(decode.functions)){
